@@ -1,20 +1,20 @@
-const API_URL = 'http://localhost:3000/api/todos';
+const STORAGE_KEY = 'todo-app-items';
 const todoForm = document.getElementById('todoForm');
 const todoInput = document.getElementById('todoInput');
 const todoList = document.getElementById('todoList');
 
-async function fetchTodos() {
-  try {
-    const response = await fetch(API_URL);
-    const data = await response.json();
-    renderTodos(data);
-  } catch (error) {
-    todoList.innerHTML = '<li class="empty-state">No se pudo conectar con el backend.</li>';
-    console.error(error);
-  }
+function getTodos() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored ? JSON.parse(stored) : [];
 }
 
-function renderTodos(todos) {
+function saveTodos(todos) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+}
+
+function renderTodos() {
+  const todos = getTodos();
+
   if (!todos.length) {
     todoList.innerHTML = '<li class="empty-state">No hay tareas aún.</li>';
     return;
@@ -37,52 +37,36 @@ function renderTodos(todos) {
     .join('');
 }
 
-async function addTodo(title) {
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title }),
-    });
+function addTodo(title) {
+  const todos = getTodos();
+  const newTodo = {
+    id: Date.now(),
+    title,
+    completed: false,
+  };
 
-    todoInput.value = '';
-    fetchTodos();
-  } catch (error) {
-    console.error(error);
-  }
+  todos.unshift(newTodo);
+  saveTodos(todos);
+  todoInput.value = '';
+  renderTodos();
 }
 
-async function toggleTodo(id, completed) {
-  try {
-    await fetch(`${API_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ completed }),
-    });
+function toggleTodo(id, completed) {
+  const todos = getTodos().map((todo) =>
+    Number(todo.id) === Number(id) ? { ...todo, completed } : todo
+  );
 
-    fetchTodos();
-  } catch (error) {
-    console.error(error);
-  }
+  saveTodos(todos);
+  renderTodos();
 }
 
-async function deleteTodo(id) {
-  try {
-    await fetch(`${API_URL}/${id}`, {
-      method: 'DELETE',
-    });
-
-    fetchTodos();
-  } catch (error) {
-    console.error(error);
-  }
+function deleteTodo(id) {
+  const todos = getTodos().filter((todo) => Number(todo.id) !== Number(id));
+  saveTodos(todos);
+  renderTodos();
 }
 
-todoForm.addEventListener('submit', async (event) => {
+todoForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const title = todoInput.value.trim();
 
@@ -91,30 +75,29 @@ todoForm.addEventListener('submit', async (event) => {
     return;
   }
 
-  await addTodo(title);
+  addTodo(title);
 });
 
-todoList.addEventListener('click', async (event) => {
+todoList.addEventListener('click', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
 
   const { action, id } = target.dataset;
-
   if (!action || !id) return;
 
   if (action === 'delete') {
-    await deleteTodo(id);
+    deleteTodo(id);
   }
 });
 
-todoList.addEventListener('change', async (event) => {
+todoList.addEventListener('change', (event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement)) return;
 
   const { action, id } = target.dataset;
   if (action === 'toggle') {
-    await toggleTodo(id, target.checked);
+    toggleTodo(id, target.checked);
   }
 });
 
-fetchTodos();
+renderTodos();

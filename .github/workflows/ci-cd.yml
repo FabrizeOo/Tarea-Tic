@@ -7,9 +7,7 @@ on:
     branches: [main, master]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 jobs:
   validate:
@@ -31,29 +29,24 @@ jobs:
           test -f frontend/script.js
           node --check frontend/script.js
 
-  deploy-pages:
+  deploy-gh-pages:
     needs: validate
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      - name: Configurar Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
+      - name: Preparar artefacto de frontend
+        run: |
+          mkdir -p public
+          cp -R frontend/. public/
 
-      - name: Subir artefacto del frontend
-        uses: actions/upload-pages-artifact@v3
+      - name: Desplegar a gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: ./frontend
-
-      - name: Desplegar a GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true

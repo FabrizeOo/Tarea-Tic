@@ -1,103 +1,118 @@
-const STORAGE_KEY = 'todo-app-items';
-const todoForm = document.getElementById('todoForm');
-const todoInput = document.getElementById('todoInput');
-const todoList = document.getElementById('todoList');
+const API_BASE = 'https://api.apiperu.dev';
+const API_TOKEN = '7447e78ccf296bcaa9da821e640755a44e01b3c268589920e9ff3fd12417735d';
 
-function getTodos() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+const dniInput = document.getElementById('dniInput');
+const searchForm = document.getElementById('searchForm');
+const statusElement = document.getElementById('status');
+const resultContainer = document.getElementById('resultContainer');
+
+function setStatus(message, type = 'info') {
+  statusElement.textContent = message;
+  statusElement.className = `status ${type}`;
 }
 
-function saveTodos(todos) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+function renderEmptyState(message = 'Sin resultados aún.') {
+  resultContainer.innerHTML = `<div class="empty-state">${message}</div>`;
 }
 
-function renderTodos() {
-  const todos = getTodos();
+function extractPersonData(data) {
+  if (!data) return null;
 
-  if (!todos.length) {
-    todoList.innerHTML = '<li class="empty-state">No hay tareas aún.</li>';
-    return;
-  }
+  if (data.data) return extractPersonData(data.data);
+  if (data.result) return extractPersonData(data.result);
 
-  todoList.innerHTML = todos
+  const person = {
+    dni: data.dni || data.numeroDocumento || data.documento || '-',
+    nombres: data.nombres || data.name || data.nombre || '-',
+    apellidoPaterno: data.apellido_paterno || data.apellidoPaterno || data.paterno || '-',
+    apellidoMaterno: data.apellido_materno || data.apellidoMaterno || data.materno || '-',
+    genero: data.genero || data.sexo || '-',
+    ubigeo: data.ubigeo || data.departamento || '-',
+  };
+
+  return person;
+}
+
+function renderPerson(person) {
+  const fields = [
+    { label: 'DNI', value: person.dni },
+    { label: 'Nombres', value: person.nombres },
+    { label: 'Apellido paterno', value: person.apellidoPaterno },
+    { label: 'Apellido materno', value: person.apellidoMaterno },
+    { label: 'Género', value: person.genero },
+    { label: 'Ubigeo', value: person.ubigeo },
+  ];
+
+  const rows = fields
     .map(
-      (todo) => `
-        <li class="todo-item">
-          <div class="todo-main">
-            <input type="checkbox" ${todo.completed ? 'checked' : ''} data-action="toggle" data-id="${todo.id}" />
-            <span class="todo-text ${todo.completed ? 'completed' : ''}">${todo.title}</span>
-          </div>
-          <div class="todo-actions">
-            <button class="btn btn-delete" data-action="delete" data-id="${todo.id}">Eliminar</button>
-          </div>
-        </li>
+      (field) => `
+        <div class="info-row">
+          <span>${field.label}</span>
+          <strong>${field.value}</strong>
+        </div>
       `
     )
     .join('');
+
+  resultContainer.innerHTML = `
+    <div class="person-card">
+      <div class="person-header">
+        <span class="badge">Persona encontrada</span>
+      </div>
+      ${rows}
+    </div>
+  `;
 }
 
-function addTodo(title) {
-  const todos = getTodos();
-  const newTodo = {
-    id: Date.now(),
-    title,
-    completed: false,
-  };
+async function consultarDni(dni) {
+  const response = await fetch(`${API_BASE}/dni`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ dni }),
+  });
 
-  todos.unshift(newTodo);
-  saveTodos(todos);
-  todoInput.value = '';
-  renderTodos();
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result?.message || 'No se pudo consultar el DNI.');
+  }
+
+  const person = extractPersonData(result);
+
+  if (!person || person.dni === '-' || person.nombres === '-') {
+    throw new Error('No se encontraron resultados para este DNI.');
+  }
+
+  return person;
 }
 
-function toggleTodo(id, completed) {
-  const todos = getTodos().map((todo) =>
-    Number(todo.id) === Number(id) ? { ...todo, completed } : todo
-  );
-
-  saveTodos(todos);
-  renderTodos();
-}
-
-function deleteTodo(id) {
-  const todos = getTodos().filter((todo) => Number(todo.id) !== Number(id));
-  saveTodos(todos);
-  renderTodos();
-}
-
-todoForm.addEventListener('submit', (event) => {
+searchForm.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const title = todoInput.value.trim();
 
-  if (!title) {
-    todoInput.focus();
+  const dni = dniInput.value.trim();
+
+  if (!/^\d{8}$/.test(dni)) {
+    setStatus('Ingrese un DNI válido de 8 dígitos.', 'error');
+    renderEmptyState('Debe ingresar 8 dígitos.');
+    dniInput.focus();
     return;
   }
 
-  addTodo(title);
-});
+  try {
+    setStatus('Consultando DNI...', 'info');
+    resultContainer.innerHTML = '<div class="loading">Buscando información...</div>';
 
-todoList.addEventListener('click', (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
-
-  const { action, id } = target.dataset;
-  if (!action || !id) return;
-
-  if (action === 'delete') {
-    deleteTodo(id);
+    const person = await consultarDni(dni);
+    renderPerson(person);
+    setStatus('Consulta exitosa.', 'success');
+  } catch (error) {
+    renderEmptyState(error.message || 'No se pudo completar la consulta.');
+    setStatus(error.message || 'Ocurrió un error al consultar el DNI.', 'error');
   }
 });
 
-todoList.addEventListener('change', (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLInputElement)) return;
-
-  const { action, id } = target.dataset;
-  if (action === 'toggle') {
-    toggleTodo(id, target.checked);
-  }
-});
-
-renderTodos();
+renderEmptyState();

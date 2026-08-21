@@ -1,6 +1,11 @@
-# ToDo App
+# Consulta de DNI con API Peru / RENIEC
 
-Aplicación web simple de tareas hecha en JavaScript vanilla, sin backend ni base de datos. Las tareas se guardan en `localStorage` del navegador para que sea fácil de desplegar y usar.
+Aplicación frontend en JavaScript vanilla para consultar información de una persona por DNI usando la API de ApiPeru.
+
+## Requisitos
+
+- Navegador web moderno
+- Token válido de ApiPeru
 
 ## Estructura
 
@@ -17,24 +22,30 @@ TAREA/
 └── .gitignore
 ```
 
-## Características
+## API usada
 
-- Crear tareas
-- Marcar como completadas
-- Eliminar tareas
-- Persistencia en el navegador usando `localStorage`
-- Fácil despliegue estático
+La app consume esta URL:
 
-## Ejecutar el proyecto
+```js
+https://api.apiperu.dev/dni
+```
 
-Solo abre el archivo `frontend/index.html` en el navegador, o usa un servidor estático simple como:
+Con el header:
+
+```js
+Authorization: Bearer TU_TOKEN
+```
+
+## Ejecutar localmente
+
+Abre directamente el archivo HTML o usa un servidor estático:
 
 ```bash
 cd frontend
 python -m http.server 8000
 ```
 
-Luego abre:
+Luego entra a:
 
 ```text
 http://localhost:8000
@@ -42,4 +53,4 @@ http://localhost:8000
 
 ## CI/CD
 
-El archivo `.github/workflows/ci-cd.yml` está preparado para validaciones del repositorio y despliegue sencillo.
+El workflow `.github/workflows/ci-cd.yml` valida el proyecto y publica la app como GitHub Pages.

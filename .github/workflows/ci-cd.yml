@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Frontend
 
 on:
   push:
@@ -6,8 +6,13 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  backend-check:
+  validate:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,43 +23,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
 
-      - name: Instalar dependencias del backend
-        working-directory: ./backend
-        run: npm install
-
-      - name: Validar backend
-        working-directory: ./backend
-        run: npm test
-
-  frontend-check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-
-      - name: Verificar archivos del frontend
+      - name: Validar archivos del frontend
         run: |
           test -f frontend/index.html
           test -f frontend/styles.css
           test -f frontend/script.js
+          node --check frontend/script.js
 
-  deploy:
-    needs: [backend-check, frontend-check]
+  deploy-pages:
+    needs: validate
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      - name: Preparar despliegue
-        run: echo "Listo para desplegar la app en tu servidor o hosting"
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
 
-      - name: Simulación de despliegue
-        run: |
-          echo "Despliegue exitoso"
-          echo "Repositorio: ${{ github.repository }}"
+      - name: Subir artefacto del frontend
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./frontend
+
+      - name: Desplegar a GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

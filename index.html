@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Consulta DNI RENIEC</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="card">
+        <p class="eyebrow">Consulta de persona</p>
+        <h1>Buscar por DNI</h1>
+
+        <form id="searchForm" class="search-form">
+          <input
+            id="dniInput"
+            type="text"
+            inputmode="numeric"
+            maxlength="8"
+            placeholder="Ingrese su DNI"
+            aria-label="Número de DNI"
+            autocomplete="off"
+          />
+          <button type="submit">Consultar</button>
+        </form>
+
+        <p id="status" class="status" aria-live="polite">
+          Digita un DNI válido para consultar la información.
+        </p>
+
+        <div id="resultContainer" class="result-container" aria-live="polite">
+          <div class="empty-state">
+            Sin resultados aún.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

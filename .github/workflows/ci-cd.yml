@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias del backend
+        working-directory: ./backend
+        run: npm install
+
+      - name: Validar backend
+        working-directory: ./backend
+        run: npm test
+
+  frontend-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Verificar archivos del frontend
+        run: |
+          test -f frontend/index.html
+          test -f frontend/styles.css
+          test -f frontend/script.js
+
+  deploy:
+    needs: [backend-check, frontend-check]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar despliegue
+        run: echo "Listo para desplegar la app en tu servidor o hosting"
+
+      - name: Simulación de despliegue
+        run: |
+          echo "Despliegue exitoso"
+          echo "Repositorio: ${{ github.repository }}"
